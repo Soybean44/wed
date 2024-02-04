@@ -1,4 +1,7 @@
 const std = @import("std");
+const nc = @cImport({
+    @cInclude("curses.h");
+});
 
 fn nextLine(reader: anytype, buffer: []u8) !?[]const u8 {
     var line = (try reader.readUntilDelimiterOrEof(
@@ -40,42 +43,15 @@ pub fn main() !void {
     var split_text = std.ArrayList([]const u8).init(alloc);
     defer split_text.deinit();
     while (text_iterator.next()) |text_item| {
-        try split_text.append(text_item);
+        try split_text.append(@ptrCast(text_item));
     }
     _ = split_text.pop();
 
-    const stdin = std.io.getStdIn();
-
-    var lexerBuffer = std.ArrayList(u8).init(alloc);
-
-    programLoop: while (true) {
-        var lineBuffer: [100]u8 = undefined;
-
-        const line = (try nextLine(stdin.reader(), &lineBuffer)).?;
-        for (line) |input| {
-            if (isNumeric(input)) {
-                std.debug.print("{}\n", .{input});
-                try lexerBuffer.append(input);
-            }
-            if (input == 'q') {
-                break :programLoop;
-            } else if (input == '%') {
-                for (split_text.items) |text_item| {
-                    std.debug.print("{s}\n", .{text_item});
-                }
-            } else if (input == 'n') {
-                for (split_text.items, 0..) |text_item, index| {
-                    std.debug.print("{}: {s}\n", .{ index, text_item });
-                }
-            } else if (input == 'p') {
-                if (lexerBuffer.items.len >= 1) {
-                    const index = try std.fmt.parseInt(usize, lexerBuffer.items, 10);
-                    lexerBuffer.clearAndFree();
-                    std.debug.print("{}: {s}\n", .{ index, split_text.items[index] });
-                } else {
-                    std.debug.print("error no pointer specified\n", .{});
-                }
-            }
-        }
+    _ = nc.initscr();
+    for (split_text.items) |text_item| {
+        _ = nc.printw(text_item);
     }
+    _ = nc.refresh();
+    _ = nc.getch();
+    _ = nc.endwin();
 }
