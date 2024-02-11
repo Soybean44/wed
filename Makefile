@@ -2,7 +2,7 @@ SRC_FILES:=$(wildcard src/*.c)
 TARGET:=wed
 BUILD_DIR=build/
 CC:=gcc
-CFLAGS:= -Wall -Werror -Wpedantic -std=c17
+CFLAGS:= -Wall -Werror -Wpedantic -std=c17 -ggdb
 LIBS:= -lncurses
 
 all: build
