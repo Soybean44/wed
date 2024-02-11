@@ -1,9 +1,13 @@
-#include "gap_buff.h"
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char **argv) {
+#include "gap_buff.h"
+
+enum Mode { NORMAL, INSERT };
+
+int main(int argc, char **argv)
+{
   if (argc <= 1) {
     perror("Error: Not enough arguments");
     exit(1);
@@ -33,8 +37,17 @@ int main(int argc, char **argv) {
   // refreshes the screen
   refresh();
 
-  // pause the screen output
-  getch();
+  enum Mode mode = NORMAL;
+  int isRunning = 1;
+  while (isRunning) {
+    // pause the screen output
+    char input = getch();
+    if (mode == NORMAL) {
+      if (input == 'q') {
+        isRunning = 0;
+      }
+    }
+  }
 
   // deallocates memory and ends ncurses
   endwin();
