@@ -48,6 +48,13 @@ typedef struct {
     }                                                                  \
   } while (0)
 
+#define refresh_screen(mode)\
+  clear(); \
+  printw("%s", editor.data.items);\
+  move(editor.view_y-1, 0);\
+  addstr(mode);\
+  move(editor.cursor_y, editor.cursor_x);
+
 typedef struct {
 	Data data;
 	Lines lines;
@@ -204,56 +211,42 @@ int main(int argc, char **argv) {
 		if (mode == NORMAL) {
 			if (input == 'q') {
 				isRunning = 0;
-			}
-			if (input == 'w') {
+			} else if (input == 'w') {
 				wed_write_to_file(&editor, file_path);
-			}
-			if (input == 'i') {
+			} else if (input == 'i') {
 				mode = INSERT;
 				move(editor.view_y-1, 0);
 				addstr("--INSERT--");
 				move(editor.cursor_y, editor.cursor_x);
-			}
-			if (input == 'h') {
+			} else if (input == 'h') {
 				wed_move_left(&editor);
 				move(editor.cursor_y, editor.cursor_x);
-			}
-			if (input == 'j') {
+			} else if (input == 'j') {
 				wed_move_down(&editor);
 				move(editor.cursor_y, editor.cursor_x);
-			}
-			if (input == 'k') {
+			} else if (input == 'k') {
 				wed_move_up(&editor);
 				move(editor.cursor_y, editor.cursor_x);
-			}
-			if (input == 'l') {
+			} else if (input == 'l') {
 				wed_move_right(&editor);
 				move(editor.cursor_y, editor.cursor_x);
 			}
 		} else if (mode == INSERT) {
+
 			if (input == (char)27) { // Escape key
 				mode = NORMAL;
-				move(editor.view_y-1, 0);
-				clrtoeol();
-				move(editor.cursor_y, editor.cursor_x);
+				refresh_screen("");
 				continue;
-			}
-			if (input == (char)KEY_BACKSPACE) {
+			} else if (input == (char)KEY_ENTER) {
+				wed_insert_char(&editor, '\n');
+				wed_recalculate_lines(&editor);
+				refresh_screen("--INPUT--");
+			} else if (input == (char)KEY_BACKSPACE) {
 				wed_backspace(&editor);
-				clear();
-				// print to screen
-				printw("%s", editor.data.items);
-				move(editor.view_y-1, 0);
-				addstr("--INSERT--");
-				move(editor.cursor_y, editor.cursor_x);
+				refresh_screen("--INPUT--");
 			} else {
 				wed_insert_char(&editor, input);
-				clear();
-				// print to screen
-				printw("%s", editor.data.items);
-				move(editor.view_y-1, 0);
-				addstr("--INSERT--");
-				move(editor.cursor_y, editor.cursor_x);
+				refresh_screen("--INPUT--");
 			}
 		}
 	}
