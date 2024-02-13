@@ -158,6 +158,16 @@ void wed_insert_char(wed_Editor* e, char letter) {
 	wed_move_right(e);
 }
 
+void wed_backspace(wed_Editor* e) {
+	memmove(&e->data.items[e->cursor-1],&e->data.items[e->cursor], e->data.count-e->cursor);
+	e->lines.items[e->cursor_y].end--;
+	for(size_t i = e->cursor_y+1; i<e->lines.count; i++) {
+		e->lines.items[i].begin--;
+		e->lines.items[i].end--;
+	}
+	wed_move_left(e);
+}
+
 enum Mode { NORMAL, INSERT };
 int main(int argc, char **argv) {
 	if (argc <= 1) {
@@ -221,10 +231,20 @@ int main(int argc, char **argv) {
 				move(editor.cursor_y, editor.cursor_x);
 			}
 		} else if (mode == INSERT) {
-			if (input == 27) {
+			if (input == (char)27) { // Escape key
 				mode = NORMAL;
 				move(editor.view_y-1, 0);
 				clrtoeol();
+				move(editor.cursor_y, editor.cursor_x);
+				continue;
+			}
+			if (input == (char)KEY_BACKSPACE) {
+				wed_backspace(&editor);
+				clear();
+				// print to screen
+				printw("%s", editor.data.items);
+				move(editor.view_y-1, 0);
+				addstr("--INSERT--");
 				move(editor.cursor_y, editor.cursor_x);
 			} else {
 				wed_insert_char(&editor, input);
