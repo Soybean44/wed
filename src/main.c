@@ -1,6 +1,10 @@
+#include <assert.h>
 #include <ncurses.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 // Escape Sequences
 #define ES_ESCAPE "\x1b"
@@ -10,7 +14,7 @@
 typedef struct {
 	char *items;
 	size_t count;
-	size_t cap;
+	size_t capacity;
 } Data;
 
 typedef struct {
@@ -21,7 +25,7 @@ typedef struct {
 typedef struct {
 	Line *items;
 	size_t count;
-	size_t cap;
+	size_t capacity;
 } Lines;
 
 #define ITEMS_INIT_CAPACITY (10 * 1024)
@@ -33,7 +37,7 @@ typedef struct {
           (da)->capacity == 0 ? ITEMS_INIT_CAPACITY : (da)->capacity * 2; \
       (da)->items =                                                       \
           realloc((da)->items, (da)->capacity * sizeof(*(da)->items));    \
-      ASSERT((da)->items != NULL, "Buy more RAM lol");                    \
+      assert((da)->items != NULL && "Buy more RAM lol");                    \
     }                                                                     \
     (da)->items[(da)->count++] = (item);                                  \
   } while (0)
@@ -44,7 +48,7 @@ typedef struct {
       (da)->capacity = desired_capacity;                               \
       (da)->items =                                                    \
           realloc((da)->items, (da)->capacity * sizeof(*(da)->items)); \
-      ASSERT((da)->items != NULL, "Buy more RAM lol");                 \
+      assert((da)->items != NULL && "Buy more RAM lol");                 \
     }                                                                  \
   } while (0)
 
@@ -62,13 +66,17 @@ void wed_free_buffers(wed_Editor *e) {
 }
 
 void wed_load_file(wed_Editor *e, char* file_path) {
-	FILE *f = fopen(file_path, "r+");
-	if (f == NULL) {
-		perror("Error: Could not open file");
+	struct stat statbuf;
+	if (stat(file_path, &statbuf) < 0) {
+		perror("Error: Couldnt Get File Stats");
 		exit(1);
 	}
-	fgets(e->data.items, e->data.cap, f);
-	// TODO: change data.count to be size of file
+	size_t file_size = statbuf.st_size;
+	da_reserve(&e->data, file_size);
+	e->data.count = file_size;
+	int fd = open(file_path, O_RDONLY);
+	read(fd, e->data.items, e->data.count);
+	close(fd);
 }
 
 enum Mode { NORMAL, INSERT };
@@ -80,12 +88,12 @@ int main(int argc, char **argv) {
 
 	char *file_path = argv[1];
 	wed_Editor editor = {0};
+	wed_load_file(&editor, file_path);
 	// init screen and sets up screen
 	initscr();
 
 	// print to screen
-
-	addstr(editor.data.items);
+	printw("%s", editor.data.items);
 
 	// refreshes the screen
 	refresh();
@@ -104,6 +112,5 @@ int main(int argc, char **argv) {
 
 	// deallocates memory and ends ncurses
 	endwin();
-	fclose(f);
 	return 0;
 }
