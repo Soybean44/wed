@@ -73,10 +73,7 @@ void wed_free_buffers(wed_Editor *e) {
 }
 
 void wed_recalculate_lines(wed_Editor* e) {
-	if (e->lines.items != 0) {
-		free(e->lines.items);
-	}
-	e->lines.items = 0;
+	memset(e->lines.items, 0, e->lines.capacity);
 	e->lines.count = 0;
 	Line curr_line = {0};
 	for(size_t i=1; i<e->data.count; i++) {
@@ -129,7 +126,7 @@ void wed_move_left(wed_Editor* e) {
 
 void wed_move_right(wed_Editor* e) {
 	size_t eol = (e->lines.items[e->cursor_y].end-e->lines.items[e->cursor_y].begin);
-	if (e->cursor_x != eol) {
+	if (e->cursor_x < eol) {
 		e->cursor_x++;
 		e->cursor++;
 	}
@@ -147,7 +144,7 @@ void wed_move_up(wed_Editor* e) {
 }
 
 void wed_move_down(wed_Editor* e) {
-	if (e->cursor_y != e->lines.count) {
+	if (e->cursor_y < e->lines.count) {
 		e->cursor_y++;
 		size_t eol = (e->lines.items[e->cursor_y].end-e->lines.items[e->cursor_y].begin);
 		if (e->cursor_x > eol) {
@@ -161,34 +158,44 @@ void wed_insert_char(wed_Editor* e, char letter) {
 	da_append(&e->data,' ');
 	memmove(&e->data.items[e->cursor+1],&e->data.items[e->cursor], e->data.count-e->cursor);
 	e->data.items[e->cursor] = letter;
-	e->lines.items[e->cursor_y].end++;
+	e->lines.items[e->cursor_y].end += 1;
 	for(size_t i = e->cursor_y+1; i<e->lines.count; i++) {
-		e->lines.items[i].begin++;
-		e->lines.items[i].end++;
+		e->lines.items[i].begin += 1;
+		e->lines.items[i].end += 1;
 	}
 	wed_move_right(e);
 }
 
 void wed_backspace(wed_Editor* e) {
-	memmove(&e->data.items[e->cursor-1],&e->data.items[e->cursor], e->data.count-e->cursor);
-	e->lines.items[e->cursor_y].end--;
-	for(size_t i = e->cursor_y+1; i<e->lines.count; i++) {
-		e->lines.items[i].begin--;
-		e->lines.items[i].end--;
+	if (e->cursor > 0) {
+		memmove(&e->data.items[e->cursor-1],&e->data.items[e->cursor], e->data.count-e->cursor);
+		e->data.count--;
+		if (e->cursor_x > 0) {
+			e->lines.items[e->cursor_y].end -= 1;
+			for(size_t i = e->cursor_y+1; i<e->lines.count; i++) {
+				e->lines.items[i].begin -= 1;
+				e->lines.items[i].end -= 1;
+			}
+			wed_move_left(e);
+		}
+		if (e->cursor_x <= 0) {
+			e->cursor_y--;
+			e->cursor_x = (e->lines.items[e->cursor_y].end-e->lines.items[e->cursor_y].begin);
+			e->lines.items[e->cursor_y].end = e->lines.items[e->cursor_y+1].end-1;
+			memmove(&e->lines.items[e->cursor_y+1], &e->lines.items[e->cursor_y+2], e->lines.count-e->cursor_y-2);
+			e->lines.count--;
+		}
 	}
-	wed_move_left(e);
 }
 
 void wed_new_line(wed_Editor* e) {
 	da_append(&e->data,' ');
 	memmove(&e->data.items[e->cursor+1],&e->data.items[e->cursor], e->data.count-e->cursor);
 	e->data.items[e->cursor] = '\n';
-	e->lines.items[e->cursor_y].end = e->lines.items[e->cursor_y].begin+e->cursor_x;
-	for(size_t i = e->cursor_y+1; i<e->lines.count; i++) {
-		e->lines.items[i].begin++;
-		e->lines.items[i].end++;
-	}
-
+	e->cursor_y++;
+	e->cursor_x = 0;
+	e->cursor++;
+	wed_recalculate_lines(e);
 }
 
 enum Mode { NORMAL, INSERT };
@@ -210,7 +217,6 @@ int main(int argc, char **argv) {
 
 	// print to screen
 	printw("%s", editor.data.items);
-
 
 	// refreshes the screen
 	refresh();
@@ -246,6 +252,8 @@ int main(int argc, char **argv) {
 			} else if (input == 'l') {
 				wed_move_right(&editor);
 				move(editor.cursor_y, editor.cursor_x);
+			} else if (input == 'r') {
+				wed_recalculate_lines(&editor);
 			}
 		} else if (mode == INSERT) {
 
@@ -253,15 +261,15 @@ int main(int argc, char **argv) {
 				mode = NORMAL;
 				refresh_screen("");
 				continue;
-			} else if (input == (char)KEY_ENTER) {
+			} else if (input == 10) { // Enter Key
 				wed_new_line(&editor);
-				refresh_screen("--INPUT--");
+				refresh_screen("--poo--");
 			} else if (input == (char)KEY_BACKSPACE) {
 				wed_backspace(&editor);
-				refresh_screen("--INPUT--");
+				refresh_screen("--INSERT--");
 			} else {
 				wed_insert_char(&editor, input);
-				refresh_screen("--INPUT--");
+				refresh_screen("--INSERT--");
 			}
 		}
 	}

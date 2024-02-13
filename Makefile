@@ -14,3 +14,6 @@ build: $(SRC_FILES)
 
 run: build
 	$(BUILD_DIR)$(TARGET)
+
+clean:
+	rm -r ./$(BUILD_DIR)
