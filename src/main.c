@@ -66,16 +66,25 @@ void wed_free_buffers(wed_Editor *e) {
 }
 
 void wed_load_file(wed_Editor *e, char* file_path) {
+	int fd = -1;
+	fd = open(file_path, O_CREAT, O_RDONLY);
+	if (fd < 0) {
+		perror("Error: Couldn't Open File");
+		exit(1);
+	}
 	struct stat statbuf;
 	if (stat(file_path, &statbuf) < 0) {
-		perror("Error: Couldnt Get File Stats");
+		perror("Error: Couldn't Get File Stats");
 		exit(1);
 	}
 	size_t file_size = statbuf.st_size;
 	da_reserve(&e->data, file_size);
 	e->data.count = file_size;
-	int fd = open(file_path, O_RDONLY);
-	read(fd, e->data.items, e->data.count);
+	if(read(fd, e->data.items, e->data.count) < 0) {
+		perror("Error: Couldn't Read from File");
+		close(fd);
+		exit(1);
+	}
 	close(fd);
 }
 
