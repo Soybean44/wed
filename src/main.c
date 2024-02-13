@@ -74,6 +74,7 @@ void wed_free_buffers(wed_Editor *e) {
 
 void wed_recalculate_lines(wed_Editor* e) {
 	memset(e->lines.items, 0, sizeof(Line*)*e->lines.capacity);
+	e->lines.count = 0;
 	Line curr_line = {0};
 	for(size_t i=1; i<e->data.count; i++) {
 		if (e->data.items[i] == '\n') {
@@ -175,6 +176,18 @@ void wed_backspace(wed_Editor* e) {
 	wed_move_left(e);
 }
 
+void wed_new_line(wed_Editor* e) {
+	da_append(&e->data,' ');
+	memmove(&e->data.items[e->cursor+1],&e->data.items[e->cursor], e->data.count-e->cursor);
+	e->data.items[e->cursor] = '\n';
+	e->lines.items[e->cursor_y].end++;
+	for(size_t i = e->cursor_y+1; i<e->lines.count; i++) {
+		e->lines.items[i].begin++;
+		e->lines.items[i].end++;
+	}
+	wed_recalculate_lines(e);
+}
+
 enum Mode { NORMAL, INSERT };
 int main(int argc, char **argv) {
 	if (argc <= 1) {
@@ -238,8 +251,7 @@ int main(int argc, char **argv) {
 				refresh_screen("");
 				continue;
 			} else if (input == (char)KEY_ENTER) {
-				wed_insert_char(&editor, '\n');
-				wed_recalculate_lines(&editor);
+				wed_new_line(&editor);
 				refresh_screen("--INPUT--");
 			} else if (input == (char)KEY_BACKSPACE) {
 				wed_backspace(&editor);
