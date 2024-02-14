@@ -240,6 +240,12 @@ int main(int argc, char **argv) {
 				move(editor.view_y-1, 0);
 				addstr("--INSERT--");
 				move(editor.cursor_y, editor.cursor_x);
+			} else if (input == 'a') {
+				wed_move_right(&editor);
+				mode = INSERT;
+				move(editor.view_y-1, 0);
+				addstr("--INSERT--");
+				move(editor.cursor_y, editor.cursor_x);
 			} else if (input == 'h') {
 				wed_move_left(&editor);
 				move(editor.cursor_y, editor.cursor_x);
